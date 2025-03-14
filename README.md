@@ -103,7 +103,7 @@ iw dev wlan0 ibss join MiRedAdHoc 2437
 sleep 2
 
 ip addr flush dev wlan0
-ip addr add 192.168.7.5/24 dev wlan0
+ip addr add 192.168.1.20/24 dev wlan0
 sleep 2
 ```
 
@@ -138,7 +138,7 @@ Añadir la configuración:
 Name=wlan0
 
 [Network]
-Address=192.168.7.5/24
+Address=192.168.1.20/24
 Gateway=192.168.1.1
 DNS=8.8.8.8
 DHCP=no
