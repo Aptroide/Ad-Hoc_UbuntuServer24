@@ -111,7 +111,7 @@ sleep 2
 Editar la configuración de la interfaz `wlan0` (cambiar si es necesario):
 
 ```bash
-sudo nano /etc/systemd/network/10-wlan0.network
+sudo nano /etc/systemd/network/10-wifi-adhoc.network
 ```
 Añadir la configuración:
 
