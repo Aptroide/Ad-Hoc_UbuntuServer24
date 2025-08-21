@@ -107,7 +107,7 @@ ip addr add 192.168.1.20/24 dev wlan0
 sleep 2
 ```
 
-## 5. Desactivar DHCP
+## 5. Desactivar DHCP y configurar IP Fija en la Red Ad-Hoc
 Editar la configuración de la interfaz `wlan0` (cambiar si es necesario):
 
 ```bash
@@ -124,37 +124,19 @@ Address=192.168.1.20/24
 Gateway=192.168.1.1
 DNS=8.8.8.8
 DHCP=no
-```
-
-## 6. Configurar IP Fija en la Red Ad-Hoc
-
-Crear un nuevo archivo de configuración:
-```bash
-sudo nano /etc/systemd/network/10-wifi-adhoc.network
-```
-Añadir la configuración:
-```ini
-[Match]
-Name=wlan0
-
-[Network]
-Address=192.168.1.20/24
-Gateway=192.168.1.1
-DNS=8.8.8.8
-DHCP=no
 LinkLocalAddressing=no
 IPv6AcceptRA=no
 MulticastDNS=yes
 ```
 
-## 7. Deshabilitar Configuración en `/usr/lib/systemd/network/`
+## 6. Deshabilitar Configuración en `/usr/lib/systemd/network/`
 
 Renombrar el archivo existente para deshabilitarlo:
 ```bash
 sudo mv /usr/lib/systemd/network/80-wifi-adhoc.network /usr/lib/systemd/network/80-wifi-adhoc.network.bak
 ```
 
-## 8. Aplicar Cambios y Habilitar el Servicio
+## 7. Aplicar Cambios y Habilitar el Servicio
 Hacer el script ejecutable:
 ```bash
 sudo chmod +x /usr/local/bin/wifi-adhoc.sh
@@ -168,7 +150,7 @@ sudo systemctl start wifi-adhoc.service
 sudo reboot
 ```
 
-## 9. Verificar Funcionamiento del Modo Ad-Hoc
+## 8. Verificar Funcionamiento del Modo Ad-Hoc
 
 Ejecutar los siguientes comandos para verificar la configuración:
 ```bash
