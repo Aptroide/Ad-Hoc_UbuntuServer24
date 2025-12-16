@@ -1,8 +1,6 @@
 #!/bin/bash
 
 # Script to automate Ad-Hoc network configuration on Ubuntu Server 24
-# Author: Ad-Hoc Configuration
-# Date: 2025
 
 set -e  # Exit on any error
 
@@ -63,13 +61,9 @@ fi
 
 print_info "Assigned IP: $IP_ADDRESS/24"
 
-# Request Ad-Hoc network name
-echo -n "Enter the Ad-Hoc network name (e.g., MyAdHocNet): "
-read ADHOC_SSID
-
-# Request channel (frequency)
-echo -n "Enter frequency in MHz (e.g., 2437 for channel 6, 2412 for channel 1): "
-read FREQUENCY
+# Define Ad-Hoc network and Request channel frequency
+ADHOC_SSID="MiRedAdHoc"
+FREQUENCY="2437"
 
 print_info "Ad-Hoc network: $ADHOC_SSID on frequency $FREQUENCY MHz"
 
@@ -90,44 +84,36 @@ fi
 
 echo ""
 print_info "Starting configuration..."
+echo ""
 
-# 1. Install dependencies
-print_info "Step 1: Installing dependencies..."
+# Step 2: Install dependencies
+print_info "Step 2: Installing dependencies..."
 apt update
 apt install -y iw wpasupplicant iwd
 
-# 2. Detect netplan file
-print_info "Step 2: Detecting Netplan configuration file..."
-NETPLAN_FILE=$(ls /etc/netplan/*.yaml 2>/dev/null | head -n 1)
+# Step 3: Create systemd service
+print_info "Step 3: Creating systemd service..."
+cat > /etc/systemd/system/wifi-adhoc.service << 'EOF'
+[Unit]
+Description=Configurar WiFi en modo Ad-Hoc
+After=network-pre.target
+Before=network.target
 
-if [ -z "$NETPLAN_FILE" ]; then
-    print_warning "No Netplan configuration file found"
-    print_info "Creating basic configuration file..."
-    NETPLAN_FILE="/etc/netplan/01-netcfg.yaml"
-    cat > "$NETPLAN_FILE" << EOF
-network:
-  version: 2
-  ethernets:
-    eth0:
-      optional: true
-      dhcp4: true
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/wifi-adhoc.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
 EOF
-else
-    print_info "Netplan file found: $NETPLAN_FILE"
-    # Create backup
-    cp "$NETPLAN_FILE" "${NETPLAN_FILE}.backup.$(date +%Y%m%d_%H%M%S)"
-    print_info "Backup created: ${NETPLAN_FILE}.backup.$(date +%Y%m%d_%H%M%S)"
-fi
 
-# 3. Create Ad-Hoc configuration script
-print_info "Step 3: Creating Ad-Hoc configuration script..."
+print_info "Systemd service created"
+
+# Step 4: Create bash script for Ad-Hoc configuration
+print_info "Step 4: Creating bash script for Ad-Hoc configuration..."
 cat > /usr/local/bin/wifi-adhoc.sh << EOF
 #!/bin/bash
-# Auto-generated script to configure Ad-Hoc mode
-# Interface: $INTERFACE
-# IP: $IP_ADDRESS/24
-# Ad-Hoc Network: $ADHOC_SSID
-
 ip link set $INTERFACE down
 sleep 2
 
@@ -143,34 +129,13 @@ sleep 2
 ip addr flush dev $INTERFACE
 ip addr add $IP_ADDRESS/24 dev $INTERFACE
 sleep 2
-
-echo "Ad-Hoc network configured successfully"
 EOF
 
 chmod +x /usr/local/bin/wifi-adhoc.sh
 print_info "Script created at /usr/local/bin/wifi-adhoc.sh"
 
-# 4. Create systemd service
-print_info "Step 4: Creating systemd service..."
-cat > /etc/systemd/system/wifi-adhoc.service << EOF
-[Unit]
-Description=Configure WiFi in Ad-Hoc mode ($INTERFACE)
-After=network-pre.target
-Before=network.target
-
-[Service]
-Type=oneshot
-ExecStart=/usr/local/bin/wifi-adhoc.sh
-RemainAfterExit=yes
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-print_info "Systemd service created"
-
-# 5. Configure static IP in systemd-networkd
-print_info "Step 5: Configuring static IP..."
+# Step 5: Configure static IP in systemd-networkd
+print_info "Step 5: Configuring static IP in systemd-networkd..."
 cat > /etc/systemd/network/10-wifi-adhoc.network << EOF
 [Match]
 Name=$INTERFACE
@@ -187,28 +152,32 @@ EOF
 
 print_info "Static network configuration created"
 
-# 6. Disable conflicting configuration
-print_info "Step 6: Disabling conflicting configurations..."
+# Step 6: Disable conflicting configuration
+print_info "Step 6: Disabling conflicting configuration in /usr/lib/systemd/network/..."
 if [ -f "/usr/lib/systemd/network/80-wifi-adhoc.network" ]; then
     mv /usr/lib/systemd/network/80-wifi-adhoc.network /usr/lib/systemd/network/80-wifi-adhoc.network.bak
     print_info "Conflicting configuration disabled"
+else
+    print_info "No conflicting configuration found"
 fi
 
-# 7. Enable and start services
-print_info "Step 7: Enabling services..."
+# Step 7: Apply changes and enable service
+print_info "Step 7: Applying changes and enabling service..."
+chmod +x /usr/local/bin/wifi-adhoc.sh
+systemctl restart systemd-networkd
 systemctl daemon-reload
 systemctl enable wifi-adhoc.service
-systemctl restart systemd-networkd
+systemctl start wifi-adhoc.service
 
-print_info "Services enabled"
+print_info "Services enabled and started"
 
-# 8. Create verification script
+# Step 8: Create verification script
 print_info "Step 8: Creating verification script..."
 cat > /usr/local/bin/verify-adhoc.sh << EOF
 #!/bin/bash
-echo "=== Interface information for $INTERFACE ==="
+echo "=== Verificar Funcionamiento del Modo Ad-Hoc ==="
 echo ""
-echo "Interface status:"
+echo "Interface info:"
 iw dev $INTERFACE info
 echo ""
 echo "IP address:"
